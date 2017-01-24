@@ -154,7 +154,7 @@ qx.Mixin.define("qx.ui.core.MExecutable",
         // remove the old binding
         if (old != null && !old.isDisposed() && ids[property] != null)
         {
-          old.removeBinding(ids[property]);
+          this.removeBinding(ids[property]);
           ids[property] = null;
         }
 
@@ -167,6 +167,7 @@ qx.Mixin.define("qx.ui.core.MExecutable",
             // check also for themed values [BUG #5906]
             if (selfPropertyValue == null) {
               // update the appearance to make sure every themed property is up to date
+              this.$$resyncNeeded = true;
               this.syncAppearance();
               selfPropertyValue = qx.util.PropertyUtil.getThemeValue(
                 this, property
@@ -177,7 +178,7 @@ qx.Mixin.define("qx.ui.core.MExecutable",
             selfPropertyValue = null;
           }
           // set up the binding
-          ids[property] = value.bind(property, this, property);
+          ids[property] = this.bind(property, value, property);
           // reapply the former value
           if (selfPropertyValue) {
             this.set(property, selfPropertyValue);
