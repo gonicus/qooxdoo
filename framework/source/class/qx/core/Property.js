@@ -84,8 +84,10 @@
  *   </td></tr>
  *   <tr><th>transform</th><td>String</td><td>
  *     On setting of the property value the method of the specified name will
- *     be called. The signature of the method is <code>function(value)</code>.
- *     The parameter <code>value</code> is the value passed to the setter.
+ *     be called. The signature of the method is <code>function(value, oldValue)</code>.
+ *     The parameter <code>value</code> is the value passed to the setter, the
+ *     parameter <code>oldValue</code> is the current value, or undefined if no value
+ *     has been set previously.
  *     The function must return the modified or unmodified value.
  *     Transformation occurs before the check function, so both may be
  *     specified if desired.  Alternatively, the transform function may throw
@@ -560,6 +562,40 @@ qx.Bootstrap.define("qx.core.Property",
         config.dereference = this.__shouldBeDereferenced(config.check);
       }
 
+      // Check for method name conflicts
+      if (qx.core.Environment.get("qx.debug")) {
+      	// Exclude qx.data.model.* because that's from marshalling and will cause conflicts to be reported
+      	if (clazz.classname && !clazz.classname.match(/^qx.data.model/)) {
+		      var allNames = [ "get" + upname, "set" + upname, "reset" + upname, "setRuntime" + upname, "resetRuntime" + upname ];
+		      if (config.async) {
+		      	allNames.push("get" + upname + "Async");
+		      	allNames.push("set" + upname + "Async");
+		      }
+		      if (config.inheritable || config.apply || config.event || config.deferredInit) {
+		      	allNames.push("init" + upname);
+		      }
+		      if (config.inheritable) {
+		      	allNames.push("refresh" + upname);
+		      }
+		      if (config.themeable) {
+		      	allNames.push("getThemed" + upname);
+		      	allNames.push("setThemed" + upname);
+		      	allNames.push("resetThemed" + upname);
+		      }
+		      if (config.check === "Boolean") {
+		      	allNames.push("is" + upname);
+		      	allNames.push("toggle" + upname);
+		      }
+	      	for (var tmp = clazz; tmp && tmp != qx.core.Object; tmp = tmp.superclass) {
+	      		allNames.forEach(function(name) {
+	        		if (clazz.prototype[name] !== undefined) {
+	        			qx.log.Logger.warn("Conflicting property method " + clazz.classname + "." + name + " with " + tmp.classname);
+	        		}
+	      		});
+	      	}
+      	}
+      }
+
       var method = this.$$method;
       var store = this.$$store;
 
@@ -589,8 +625,9 @@ qx.Bootstrap.define("qx.core.Property",
       }
       members[method.get[name]].$$install = function(value) {
         qx.core.Property.__installOptimizedGetter(clazz, name, "get", arguments);
-        if (config.async)
+        if (config.async) {
         	qx.core.Property.__installOptimizedGetter(clazz, name, "getAsync", arguments);
+        }
       };
 
       var setName = method.set[name] = "set" + upname;
@@ -1231,7 +1268,7 @@ qx.Bootstrap.define("qx.core.Property",
       );
 
       if (incomingValue) {
-        code.push('if(equ.call(this,old,value))return value;');
+        code.push('if(equ.call(this,this.',store,',value))return value;');
       } else if (resetValue) {
         code.push('if(this.', store, '===undefined)return;');
       }
@@ -1757,19 +1794,28 @@ qx.Bootstrap.define("qx.core.Property",
       if (config.apply) {
         code.push('promise = this.', config.apply, '(computed, old, "', name, '", "', variant, '");');
       }
-
-      code.push("function fire() {");
+      
+      code.push(
+      		"function fire() {",
+            "var promiseData = qx.Promise.resolve(computed);",
+            "var promise = promiseData;"
+      		);
       
       // Fire event
       if (config.event) {
         code.push(
             "var reg=qx.event.Registration;",
-            "if(reg.hasListener(this, '", config.event, "'))",
-              "reg.fireEvent(this, '", config.event, "', qx.event.type.Data, [computed, old]", ");");
+            "if(reg.hasListener(this, '", config.event, "')) {",
+              "promise = reg.fireEventAsync(this, '", config.event, "', qx.event.type.Data, [computed, old]", ");",
+              "promise = promise.then(function() { return computed; });",
+            "}"
+            );
         if (config.async) {
           code.push(
               "if(reg.hasListener(this, '", config.event, "Async'))",
-                "reg.fireEvent(this, '", config.event, "Async', qx.event.type.Data, [qx.Promise.resolve(computed), old]", ");");
+                "promise = promise.then(function() {",
+                  "return reg.fireEventAsync(this, '", config.event, "Async', qx.event.type.Data, [promiseData, old]", ");",
+                "}, this);");
         }
       }
       
@@ -1785,13 +1831,12 @@ qx.Bootstrap.define("qx.core.Property",
       }
       
       code.push(
-          "return value;",
+          "return promise;",
         "}",
         "if(promise instanceof qx.Promise) " +
           "return promise.then(fire, this); ",
-        "fire.call(this);"
+        "return fire.call(this);"
       );
-      code.push('return promise;');
     }
   }
 });

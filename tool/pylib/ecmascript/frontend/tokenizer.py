@@ -126,12 +126,12 @@ class Tokenizer(object):
 
     def parseToken(self):
         for tok in self.scanner:
+
             hasNoPreviousDot = True
             try:
                 hasNoPreviousDot = self.out_stream[-1]['detail'] != "DOT"
             except (IndexError):
                 pass
-
 
             # some inital values (tok isinstanceof Scanner.Token())
             token = {
