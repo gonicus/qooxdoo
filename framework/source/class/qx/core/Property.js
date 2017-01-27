@@ -586,7 +586,7 @@ qx.Bootstrap.define("qx.core.Property",
 		      	allNames.push("is" + upname);
 		      	allNames.push("toggle" + upname);
 		      }
-	      	for (var tmp = clazz; tmp && tmp != qx.core.Object; tmp = tmp.superclass) {
+	      	for (var tmp = clazz.superclass; tmp && tmp != qx.core.Object; tmp = tmp.superclass) {
 	      		allNames.forEach(function(name) {
 	        		if (clazz.prototype[name] !== undefined) {
 	        			qx.log.Logger.warn("Conflicting property method " + clazz.classname + "." + name + " with " + tmp.classname);
@@ -1795,44 +1795,75 @@ qx.Bootstrap.define("qx.core.Property",
         code.push('promise = this.', config.apply, '(computed, old, "', name, '", "', variant, '");');
       }
       
-      code.push(
-      		"function fire() {",
-            "var promiseData = qx.Promise.resolve(computed);",
-            "var promise = promiseData;"
-      		);
       
-      // Fire event
-      if (config.event) {
+      if (config.async) {
         code.push(
-            "var reg=qx.event.Registration;",
-            "if(reg.hasListener(this, '", config.event, "')) {",
-              "promise = reg.fireEventAsync(this, '", config.event, "', qx.event.type.Data, [computed, old]", ");",
-              "promise = promise.then(function() { return computed; });",
-            "}"
-            );
-        if (config.async) {
+        		"function fire() {",
+              "var promiseData = qx.Promise.resolve(computed);",
+              "var promise = promiseData;"
+        		);
+        
+        // Fire event
+        if (config.event) {
           code.push(
+              "var reg=qx.event.Registration;",
+              "if(reg.hasListener(this, '", config.event, "')) {",
+                "promise = reg.fireEventAsync(this, '", config.event, "', qx.event.type.Data, [computed, old]", ");",
+                "promise = promise.then(function() { return computed; });",
+              "}",
               "if(reg.hasListener(this, '", config.event, "Async'))",
                 "promise = promise.then(function() {",
-                  "return reg.fireEventAsync(this, '", config.event, "Async', qx.event.type.Data, [promiseData, old]", ");",
-                "}, this);");
+                    "return reg.fireEventAsync(this, '", config.event, "Async', qx.event.type.Data, [promiseData, old]", ");",
+                  "}, this);"
+              );
         }
-      }
-      
-      // Emit code to update the inherited values of child objects
-      if (refresh) {
+        
+        // Emit code to update the inherited values of child objects
+        if (refresh) {
+          code.push(
+            'var a=this._getChildren();',
+            'if(a)',
+              'for(var i=0,l=a.length;i<l;i++){',
+                'if(a[i].', this.$$method.refresh[name], ')',
+                  'a[i].', this.$$method.refresh[name], '(backup);',
+              '}');
+        }
+        
         code.push(
-          'var a=this._getChildren();',
-          'if(a)',
-            'for(var i=0,l=a.length;i<l;i++){',
-              'if(a[i].', this.$$method.refresh[name], ')',
-                'a[i].', this.$$method.refresh[name], '(backup);',
-            '}');
+            "return promise;",
+          "}");
+      } else {
+        code.push(
+          "function fire() {");
+            
+        // Fire event
+        if (config.event) {
+          code.push(
+              "var reg=qx.event.Registration;",
+              
+              "if(reg.hasListener(this, '", config.event, "'))",
+                "reg.fireEvent(this, '", config.event, "', qx.event.type.Data, [computed, old]", ");",
+              "if(reg.hasListener(this, '", config.event, "Async'))",
+                "reg.fireEventAsync(this, '", config.event, "Async', qx.event.type.Data, [qx.Promise.resolve(computed), old]", ");"
+              );
+        }
+        // Emit code to update the inherited values of child objects
+        if (refresh) {
+          code.push(
+            'var a=this._getChildren();',
+            'if(a)',
+              'for(var i=0,l=a.length;i<l;i++){',
+                'if(a[i].', this.$$method.refresh[name], ')',
+                  'a[i].', this.$$method.refresh[name], '(backup);',
+              '}');
+        }
+        
+        code.push(
+            "return computed;",
+          "}");
       }
       
       code.push(
-          "return promise;",
-        "}",
         "if(promise instanceof qx.Promise) " +
           "return promise.then(fire, this); ",
         "return fire.call(this);"
