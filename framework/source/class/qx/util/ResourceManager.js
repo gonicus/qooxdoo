@@ -71,7 +71,7 @@ qx.Class.define("qx.util.ResourceManager",
       if(!registry) {
         return null;
       }
-  
+
       var ids = [];
       for (var id in registry) {
         if (registry.hasOwnProperty(id)) {
@@ -81,7 +81,7 @@ qx.Class.define("qx.util.ResourceManager",
           ids.push(id);
         }
       }
-  
+
       return ids;
     },
 
