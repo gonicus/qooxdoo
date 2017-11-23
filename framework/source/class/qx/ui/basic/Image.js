@@ -753,6 +753,11 @@ qx.Class.define("qx.ui.basic.Image",
       if (isFont) {
         var size;
 
+        // Don't use scale if size is set via postfix
+        if (this.getScale() && parseInt(source.split("/")[2], 10)) {
+          this.setScale(false);
+        }
+
         // Adjust size if scaling is applied
         if (this.getScale()) {
           var width = this.getWidth() || this.getHeight() || 40;
@@ -760,7 +765,11 @@ qx.Class.define("qx.ui.basic.Image",
           size = width > height ? height : width;
         }
         else {
-          size = parseInt(source.split("/")[2] || qx.theme.manager.Font.getInstance().resolve(source.match(/@([^/]+)/)[1]).getSize());
+          var font = qx.theme.manager.Font.getInstance().resolve(source.match(/@([^/]+)/)[1]);
+          if (qx.core.Environment.get("qx.debug")) {
+            this.assertObject(font, "Virtual image source contains unkown font descriptor");
+          }
+          size = parseInt(source.split("/")[2] || font.getSize(), 10);
         }
 
         // Default to something definitively numeric if nothing set

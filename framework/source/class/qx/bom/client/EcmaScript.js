@@ -177,6 +177,16 @@ qx.Bootstrap.define("qx.bom.client.EcmaScript",
 
 
     /**
+     * Checks if 'includes' is supported on the Array object.
+     * @internal
+     * @return {Boolean} <code>true</code>, if the method is available.
+     */
+    getArrayIncludes : function() {
+      return !!Array.prototype.includes;
+    },
+
+
+    /**
      * Checks if 'toString' is supported on the Error object and
      * its working as expected.
      * @internal
@@ -220,6 +230,14 @@ qx.Bootstrap.define("qx.bom.client.EcmaScript",
       return !!Object.keys;
     },
 
+    /**
+     * Checks if 'values' is supported on the Object object.
+     * @internal
+     * @return {Boolean} <code>true</code>, if the method is available.
+     */
+    getObjectValues : function() {
+      return !!Object.values;
+    },
 
     /**
      * Checks if 'now' is supported on the Date object.
@@ -300,6 +318,7 @@ qx.Bootstrap.define("qx.bom.client.EcmaScript",
     qx.core.Environment.add("ecmascript.array.every", statics.getArrayEvery);
     qx.core.Environment.add("ecmascript.array.reduce", statics.getArrayReduce);
     qx.core.Environment.add("ecmascript.array.reduceright", statics.getArrayReduceRight);
+    qx.core.Environment.add("ecmascript.array.includes", statics.getArrayIncludes);
 
     // date polyfill
     qx.core.Environment.add("ecmascript.date.now", statics.getDateNow);
@@ -314,6 +333,7 @@ qx.Bootstrap.define("qx.bom.client.EcmaScript",
 
     // object polyfill
     qx.core.Environment.add("ecmascript.object.keys", statics.getObjectKeys);
+    qx.core.Environment.add("ecmascript.object.values", statics.getObjectValues);
 
     // string polyfill
     qx.core.Environment.add("ecmascript.string.startsWith", statics.getStringStartsWith);
