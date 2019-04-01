@@ -24,11 +24,13 @@ qx.Class.define("qx.ui.table.pane.FocusIndicator",
   extend : qx.ui.container.Composite,
 
   /**
-   * @param scroller {Scroller} The scroller, which contains this focus indicator
+   * @param scroller {qx.ui.table.pane.Scroller} The scroller, which contains this focus indicator
    */
   construct : function(scroller)
   {
-    this.base(arguments);
+    // use the grow layout to make sure that the editing control
+    // always fills the focus indicator box.
+    this.base(arguments, new qx.ui.layout.Grow());
     this.__scroller = scroller;
 
     this.setKeepActive(true);

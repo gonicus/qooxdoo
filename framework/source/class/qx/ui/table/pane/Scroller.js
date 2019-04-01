@@ -214,13 +214,18 @@ qx.Class.define("qx.ui.table.pane.Scroller",
   properties :
   {
 
-    /** Whether to show the horizontal scroll bar */
+    /**
+     * Whether to show the horizontal scroll bar. This is a tri-state
+     * value. `true` means show the scroll bar; `false` means exclude it; null
+     * means hide it so it retains its space but doesn't show a scroll bar.
+     */
     horizontalScrollBarVisible :
     {
       check : "Boolean",
       init : false,
       apply : "_applyHorizontalScrollBarVisible",
-      event : "changeHorizontalScrollBarVisible"
+      event : "changeHorizontalScrollBarVisible",
+      nullable : true
     },
 
     /** Whether to show the vertical scroll bar */
@@ -494,7 +499,14 @@ qx.Class.define("qx.ui.table.pane.Scroller",
 
     // property modifier
     _applyHorizontalScrollBarVisible : function(value, old) {
-      this.__horScrollBar.setVisibility(value ? "visible" : "excluded");
+      if (value === null)
+      {
+        this.__horScrollBar.setVisibility("hidden");
+      }
+      else
+      {
+        this.__horScrollBar.setVisibility(value ? "visible" : "excluded");
+      }
     },
 
 
@@ -1286,12 +1298,6 @@ qx.Class.define("qx.ui.table.pane.Scroller",
 
       this.getApplicationRoot().setGlobalCursor(null);
       this.setCursor(null);
-
-      // handle edit cell if available
-      if (this.isEditing()) {
-        var height = this._cellEditor.getBounds().height;
-        this._cellEditor.setUserBounds(0, 0, this.__lastResizeWidth, height);
-      }
     },
 
 
@@ -1883,10 +1889,6 @@ qx.Class.define("qx.ui.table.pane.Scroller",
         }
         else
         {
-          // The cell editor is a traditional in-place editor.
-          var size = this.__focusIndicator.getInnerSize();
-          this._cellEditor.setUserBounds(0, 0, size.width, size.height);
-
           // prevent tap event from bubbling up to the table
           this.__focusIndicatorPointerDownListener = this.__focusIndicator.addListener("pointerdown", function(e)
           {
